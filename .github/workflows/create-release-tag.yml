@@ -1,0 +1,126 @@
+name: Create Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g., 1.0.0)"
+        required: true
+        type: string
+      update_package_json:
+        description: "Update package.json version to match the tag"
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate version format
+        id: validate-version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+
+          # Validate semantic version format (major.minor.patch)
+          if ! echo "$VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Please use semantic version format (e.g., 1.0.0, 2.1.3)"
+            exit 1
+          fi
+
+          echo "✅ Valid version format: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        run: |
+          VERSION="${{ steps.validate-version.outputs.version }}"
+          TAG_NAME="v$VERSION"
+
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "❌ Tag $TAG_NAME already exists"
+            echo "Available tags:"
+            git tag | sort -V | tail -10
+            exit 1
+          fi
+
+          echo "✅ Tag $TAG_NAME does not exist, proceeding..."
+
+      - name: Update package.json version
+        if: github.event.inputs.update_package_json == 'true'
+        run: |
+          VERSION="${{ steps.validate-version.outputs.version }}"
+
+          echo "Updating package.json version to $VERSION"
+
+          # Update package.json version
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+            const oldVersion = pkg.version;
+            pkg.version = '$VERSION';
+            fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+            console.log('Updated package.json version from', oldVersion, 'to', '$VERSION');
+          "
+
+      - name: Verify package.json version
+        if: github.event.inputs.update_package_json == 'true'
+        run: |
+          VERSION="${{ steps.validate-version.outputs.version }}"
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+          if [ "$PACKAGE_VERSION" != "$VERSION" ]; then
+            echo "❌ Failed to update package.json version. Expected: $VERSION, Got: $PACKAGE_VERSION"
+            exit 1
+          fi
+
+          echo "✅ Package.json version verified: $PACKAGE_VERSION"
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ steps.validate-version.outputs.version }}"
+          TAG_NAME="v$VERSION"
+
+          echo "Creating tag: $TAG_NAME"
+
+          # Configure git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # Add changes if package.json was updated
+          if [ "${{ github.event.inputs.update_package_json }}" == "true" ]; then
+            git add package.json
+            git commit -m "chore: bump version to $VERSION" || echo "No changes to commit"
+            git push origin HEAD
+          fi
+
+          # Create and push tag
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+
+          echo "✅ Successfully created and pushed tag: $TAG_NAME"
+
+      - name: Summary
+        run: |
+          VERSION="${{ steps.validate-version.outputs.version }}"
+          TAG_NAME="v$VERSION"
+
+          echo "🎉 Release tag creation completed!"
+          echo "Tag: $TAG_NAME"
+          echo "Version: $VERSION"
+          echo "Package.json updated: ${{ github.event.inputs.update_package_json }}"
+          echo ""
+          echo "The release workflow will now automatically trigger and publish to npm."
