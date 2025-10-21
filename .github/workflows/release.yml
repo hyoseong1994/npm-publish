@@ -71,10 +71,39 @@ jobs:
           bun run prepare
           bun run build
 
+      - name: Debug and Check Prerequisites
+        run: |
+          echo "=== Debug Information ==="
+          echo "NPM_TOKEN exists: ${{ github.secrets.NPM_TOKEN != '' }}"
+
+          if [ -z "${{ github.secrets.NPM_TOKEN }}" ]; then
+            echo "❌ NPM_TOKEN is not set in GitHub Secrets"
+            echo "Please set NPM_TOKEN in Repository Settings > Secrets and variables > Actions"
+          else
+            echo "✅ NPM_TOKEN is set"
+          fi
+
+          echo "Checking build directory..."
+          ls -la dist/ || echo "dist directory may not exist yet"
+
+          echo "Package.json info:"
+          cat package.json | jq '{name: .name, version: .version}' || cat package.json | grep -E '"name"|"version"'
+
       - name: Publish to npm
         if: ${{ github.secrets.NPM_TOKEN != '' }}
         env:
           NODE_AUTH_TOKEN: ${{ github.secrets.NPM_TOKEN }}
         run: |
+          echo "Setting up npm authentication..."
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-          npm publish --access public
+
+          echo "Checking package.json..."
+          cat package.json | grep -E '"name"|"version"'
+
+          echo "Checking if package already exists..."
+          npm view hyoseong-publish version 2>/dev/null || echo "Package does not exist yet"
+
+          echo "Publishing to npm..."
+          npm publish --access public --verbose
+
+          echo "✅ Package published successfully!"
