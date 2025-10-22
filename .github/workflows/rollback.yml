@@ -1,0 +1,157 @@
+name: Rollback Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "롤백 작업 선택"
+        required: true
+        type: choice
+        options:
+          - deprecate
+          - unpublish
+          - delete-tag
+      version:
+        description: "대상 버전 (예: 1.0.0)"
+        required: true
+        type: string
+      reason:
+        description: "롤백 사유 (deprecate 시 필수)"
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Validate inputs
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ 잘못된 버전 형식입니다. 예: 1.0.0"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.action }}" == "deprecate" && -z "${{ inputs.reason }}" ]]; then
+            echo "❌ deprecate 작업에는 롤백 사유가 필요합니다."
+            exit 1
+          fi
+
+      - name: Deprecate npm package
+        if: inputs.action == 'deprecate'
+        run: |
+          VERSION="${{ inputs.version }}"
+          REASON="${{ inputs.reason }}"
+
+          echo "📦 패키지 deprecate 중: daleui@$VERSION"
+          npm deprecate daleui@$VERSION "$REASON"
+
+          echo "✅ daleui@$VERSION이 deprecated 처리되었습니다."
+          echo "사용자들은 다음 메시지를 보게 됩니다: $REASON"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Unpublish npm package
+        if: inputs.action == 'unpublish'
+        run: |
+          VERSION="${{ inputs.version }}"
+
+          echo "⚠️ 패키지 unpublish 중: daleui@$VERSION"
+          echo "경고: 이 작업은 배포 후 24시간 이내에만 가능합니다."
+
+          npm unpublish daleui@$VERSION
+
+          echo "✅ daleui@$VERSION이 npm에서 제거되었습니다."
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Delete Git tag
+        if: inputs.action == 'delete-tag'
+        run: |
+          VERSION="${{ inputs.version }}"
+          TAG="v$VERSION"
+
+          echo "🏷️ Git 태그 삭제 중: $TAG"
+
+          # Git 설정
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # 로컬 태그가 존재하는지 확인
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag -d "$TAG"
+            echo "로컬 태그 $TAG 삭제됨"
+          else
+            echo "로컬 태그 $TAG가 존재하지 않습니다."
+          fi
+
+          # 원격 태그 삭제
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
+            git push origin :refs/tags/$TAG
+            echo "원격 태그 $TAG 삭제됨"
+          else
+            echo "원격 태그 $TAG가 존재하지 않습니다."
+          fi
+
+          echo "✅ Git 태그 $TAG가 삭제되었습니다."
+
+      - name: Create rollback summary
+        run: |
+          echo "## 🔄 롤백 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **작업**: ${{ inputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **버전**: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ inputs.action }}" == "deprecate" ]]; then
+            echo "- **사유**: ${{ inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 다음 단계" >> $GITHUB_STEP_SUMMARY
+            echo "1. 사용자들에게 공지를 보내세요" >> $GITHUB_STEP_SUMMARY
+            echo "2. 수정된 버전을 배포하세요" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ inputs.action }}" == "unpublish" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ 주의사항" >> $GITHUB_STEP_SUMMARY
+            echo "- 패키지가 npm에서 완전히 제거되었습니다" >> $GITHUB_STEP_SUMMARY
+            echo "- 이미 이 버전을 사용 중인 사용자에게 영향을 줄 수 있습니다" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 다음 단계" >> $GITHUB_STEP_SUMMARY
+            echo "1. 수정된 코드를 준비하세요" >> $GITHUB_STEP_SUMMARY
+            echo "2. 새로운 버전으로 재배포하세요" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ inputs.action }}" == "delete-tag" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 다음 단계" >> $GITHUB_STEP_SUMMARY
+            echo "1. 필요한 경우 GitHub Release도 수동으로 삭제하세요" >> $GITHUB_STEP_SUMMARY
+            echo "2. npm 패키지는 별도로 처리가 필요합니다" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "## ❌ 롤백 실패" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **작업**: ${{ inputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **버전**: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 가능한 원인" >> $GITHUB_STEP_SUMMARY
+          echo "- unpublish: 24시간이 지난 버전" >> $GITHUB_STEP_SUMMARY
+          echo "- 존재하지 않는 버전/태그" >> $GITHUB_STEP_SUMMARY
+          echo "- NPM_TOKEN 권한 부족" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 해결 방법" >> $GITHUB_STEP_SUMMARY
+          echo "- 24시간이 지난 경우: deprecate 사용" >> $GITHUB_STEP_SUMMARY
+          echo "- 수동 롤백이 필요한 경우: 로컬에서 npm CLI 사용" >> $GITHUB_STEP_SUMMARY
