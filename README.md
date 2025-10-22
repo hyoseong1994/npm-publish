@@ -21,7 +21,7 @@
 
 ---
 
-## 구현 체크리스트
+## 티켓
 
 ### 📋 GitHub Issues
 
@@ -34,17 +34,18 @@
   - `vite.config.ts`: React를 번들에 포함하지 않게 하고 ES 모듈 설정 등 수정
   - `src/index.ts`: 메인 진입점 생성
 - **#3** - 태그 생성 워크플로우 구현
-  - `release label` 이 있는 PR이 merge 될 경우 태그 생성
+  - `npm version`을 사용하여 버전 업
+  - `release label`이 있는 PR이 merge될 경우 태그 생성
 - **#4** - 배포 워크플로우
   - 태그 생성 워크플로우가 완료될 경우 배포
-  - 주의 태그 생성을 트리거로 잡을 경우 github action 정책 때문에 동작하지 않음
+  - 주의: 태그 생성을 트리거로 잡을 경우 GitHub Action 정책 때문에 동작하지 않음
 
 #### Low Priority
 
 - **#5** - CHANGELOG.md 템플릿 작성
   - CHANGELOG.md를 통해 변경 내역을 기록
 - **#6** - 롤백 워크플로우 구현
-  - manual로 구현 input으로 `tag`와 `deprecated 사유`를 받아야함
-  - npm 배포된 패키지는 삭제가 불가능하기에 deprecated만 가능
-- **#7** - github release 생성 워크플로우
-  - github release를 생성하여 github 우측 메뉴에 보여줄 수 있음
+  - manual로 구현, input으로 `tag`와 `deprecated 사유`를 받음
+  - npm 배포된 패키지는 삭제 불가능하므로 deprecated만 가능
+- **#7** - GitHub Release 생성 워크플로우
+  - GitHub Release를 생성하여 GitHub 우측 메뉴에 표시
