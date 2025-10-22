@@ -59,10 +59,22 @@ jobs:
           REASON="${{ inputs.reason }}"
 
           echo "📦 패키지 deprecate 중: daleui@$VERSION"
-          npm deprecate daleui@$VERSION "$REASON"
 
-          echo "✅ daleui@$VERSION이 deprecated 처리되었습니다."
-          echo "사용자들은 다음 메시지를 보게 됩니다: $REASON"
+          # 패키지 존재 여부 확인
+          if ! npm view daleui@$VERSION version &>/dev/null; then
+            echo "❌ 오류: daleui@$VERSION 버전이 npm에 존재하지 않습니다."
+            echo "존재하는 버전을 확인하세요: npm view daleui versions"
+            exit 1
+          fi
+
+          # deprecate 실행 및 결과 확인
+          if npm deprecate daleui@$VERSION "$REASON"; then
+            echo "✅ daleui@$VERSION이 deprecated 처리되었습니다."
+            echo "사용자들은 다음 메시지를 보게 됩니다: $REASON"
+          else
+            echo "❌ deprecate 실패. 권한을 확인하세요."
+            exit 1
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -74,9 +86,25 @@ jobs:
           echo "⚠️ 패키지 unpublish 중: daleui@$VERSION"
           echo "경고: 이 작업은 배포 후 24시간 이내에만 가능합니다."
 
-          npm unpublish daleui@$VERSION
+          # 패키지 존재 여부 확인
+          if ! npm view daleui@$VERSION version &>/dev/null; then
+            echo "❌ 오류: daleui@$VERSION 버전이 npm에 존재하지 않습니다."
+            exit 1
+          fi
 
-          echo "✅ daleui@$VERSION이 npm에서 제거되었습니다."
+          # unpublish 실행 및 결과 확인
+          if npm unpublish daleui@$VERSION; then
+            echo "✅ daleui@$VERSION이 npm에서 제거되었습니다."
+          else
+            echo "❌ unpublish 실패. 가능한 원인:"
+            echo "  - 배포 후 24시간이 지났을 수 있습니다."
+            echo "  - 권한이 부족할 수 있습니다."
+            echo "  - 다운로드가 많은 패키지일 수 있습니다."
+            echo ""
+            echo "💡 대안: deprecate를 사용하세요:"
+            echo "   npm deprecate daleui@$VERSION \"This version has been recalled\""
+            exit 1
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
