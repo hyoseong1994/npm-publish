@@ -37,53 +37,27 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # For workflow_run events, we need to get the latest tag
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            # Get the most recent tag created by the create-release-tag workflow
             TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            
             if [ -z "$TAG_NAME" ]; then
-              echo "Could not find any tags"
+              echo "❌ Could not find any tags"
               exit 1
             fi
-            
-            echo "Found latest tag: $TAG_NAME"
           else
-            # For tag push events
             TAG_NAME=${GITHUB_REF#refs/tags/}
           fi
-
           VERSION=${TAG_NAME#v}
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Publishing version: ${VERSION}"
 
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          echo "Setting up npm authentication..."
-
           if [ -z "${NODE_AUTH_TOKEN}" ]; then
             echo "❌ NPM_TOKEN is not set"
             exit 1
           fi
-
-          echo "✅ NPM_TOKEN is set (length: ${#NODE_AUTH_TOKEN})"
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-
-          echo "Checking package.json..."
-          cat package.json | grep -E '"name"|"version"'
-
-          echo "Checking if package already exists..."
-          npm view hyoseong-publish version 2>/dev/null || echo "Package does not exist yet - first publish!"
-
-          echo "Publishing to npm..."
-          npm publish --access public --verbose
-
+          npm publish --access public
           echo "✅ Package published successfully!"
-
-      - name: Mark npm publish success
-        run: |
-          echo "✅ npm publish completed successfully"
-          echo "Tag ${{ steps.version.outputs.tag_name }} has been published to npm"

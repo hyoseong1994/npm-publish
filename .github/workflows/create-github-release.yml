@@ -25,52 +25,32 @@ jobs:
       - name: Get workflow run details and extract tag
         id: tag-info
         run: |
-          # Get the head_branch which should contain the tag name for tag-triggered workflows
           HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
-
-          # For tag pushes, the head_branch is actually the tag name
           if echo "$HEAD_BRANCH" | grep -E '^v[0-9]+\.[0-9]+\.' >/dev/null; then
             TAG_NAME="$HEAD_BRANCH"
           else
-            # Fallback: get the latest tag if we can't determine from workflow run
             TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           fi
-
           if [ -z "$TAG_NAME" ]; then
-            echo "Could not determine tag name from workflow run"
-            echo "HEAD_BRANCH: $HEAD_BRANCH"
-            git tag --list | tail -5
+            echo "❌ Could not determine tag name from workflow run"
             exit 1
           fi
-
-          # Remove 'v' prefix to get version number
           VERSION=${TAG_NAME#v}
-
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected tag from workflow run: $TAG_NAME, version: $VERSION"
 
-      - name: Verify tag exists
+      - name: Check if release already exists
+        id: check-existing-release
         run: |
           TAG_NAME="${{ steps.tag-info.outputs.tag_name }}"
           if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
             echo "❌ Tag $TAG_NAME does not exist locally"
             exit 1
           fi
-          echo "✅ Tag $TAG_NAME exists"
-
-      - name: Check if release already exists
-        id: check-existing-release
-        run: |
-          TAG_NAME="${{ steps.tag-info.outputs.tag_name }}"
-
-          # Check if GitHub release already exists
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Release $TAG_NAME already exists"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Release $TAG_NAME does not exist, will create"
           fi
 
       - name: Extract changelog for version
@@ -78,14 +58,10 @@ jobs:
         id: changelog
         run: |
           VERSION="${{ steps.tag-info.outputs.version }}"
-
-          # Check if CHANGELOG.md exists
           if [ ! -f "CHANGELOG.md" ]; then
             echo "changelog=No CHANGELOG.md found" >> $GITHUB_OUTPUT
             exit 0
           fi
-
-          # Extract changelog section for this version
           CHANGELOG_CONTENT=$(awk "
           /^## \[$VERSION\]/ {
             print_section = 1
@@ -100,11 +76,9 @@ jobs:
             }
           }
           " CHANGELOG.md)
-
           if [ -z "$CHANGELOG_CONTENT" ]; then
             echo "changelog=No changelog found for version $VERSION" >> $GITHUB_OUTPUT
           else
-            # Use delimiter for multiline output
             {
               echo "changelog<<EOF"
               echo "$CHANGELOG_CONTENT"
@@ -134,8 +108,6 @@ jobs:
             ---
             *Full changelog: https://github.com/${{ github.repository }}/compare/HEAD...${tagName}*`;
 
-            console.log(`Creating GitHub Release for ${tagName}...`);
-
             try {
               const response = await github.rest.repos.createRelease({
                 owner: context.repo.owner,
@@ -146,9 +118,7 @@ jobs:
                 draft: false,
                 prerelease: false
               });
-              
               console.log(`✅ GitHub Release created: ${response.data.html_url}`);
             } catch (error) {
-              console.error('❌ Failed to create GitHub Release:', error);
               throw error;
             }
