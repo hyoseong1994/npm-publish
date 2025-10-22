@@ -52,24 +52,32 @@ jobs:
             exit 1
           fi
 
+      - name: Get package name
+        id: package-info
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          echo "📦 패키지 이름: $PACKAGE_NAME"
+
       - name: Deprecate npm package
         if: inputs.action == 'deprecate'
         run: |
           VERSION="${{ inputs.version }}"
           REASON="${{ inputs.reason }}"
+          PACKAGE="${{ steps.package-info.outputs.package_name }}"
 
-          echo "📦 패키지 deprecate 중: daleui@$VERSION"
+          echo "📦 패키지 deprecate 중: $PACKAGE@$VERSION"
 
           # 패키지 존재 여부 확인
-          if ! npm view daleui@$VERSION version &>/dev/null; then
-            echo "❌ 오류: daleui@$VERSION 버전이 npm에 존재하지 않습니다."
-            echo "존재하는 버전을 확인하세요: npm view daleui versions"
+          if ! npm view $PACKAGE@$VERSION version &>/dev/null; then
+            echo "❌ 오류: $PACKAGE@$VERSION 버전이 npm에 존재하지 않습니다."
+            echo "존재하는 버전을 확인하세요: npm view $PACKAGE versions"
             exit 1
           fi
 
           # deprecate 실행 및 결과 확인
-          if npm deprecate daleui@$VERSION "$REASON"; then
-            echo "✅ daleui@$VERSION이 deprecated 처리되었습니다."
+          if npm deprecate $PACKAGE@$VERSION "$REASON"; then
+            echo "✅ $PACKAGE@$VERSION이 deprecated 처리되었습니다."
             echo "사용자들은 다음 메시지를 보게 됩니다: $REASON"
           else
             echo "❌ deprecate 실패. 권한을 확인하세요."
@@ -82,19 +90,20 @@ jobs:
         if: inputs.action == 'unpublish'
         run: |
           VERSION="${{ inputs.version }}"
+          PACKAGE="${{ steps.package-info.outputs.package_name }}"
 
-          echo "⚠️ 패키지 unpublish 중: daleui@$VERSION"
+          echo "⚠️ 패키지 unpublish 중: $PACKAGE@$VERSION"
           echo "경고: 이 작업은 배포 후 24시간 이내에만 가능합니다."
 
           # 패키지 존재 여부 확인
-          if ! npm view daleui@$VERSION version &>/dev/null; then
-            echo "❌ 오류: daleui@$VERSION 버전이 npm에 존재하지 않습니다."
+          if ! npm view $PACKAGE@$VERSION version &>/dev/null; then
+            echo "❌ 오류: $PACKAGE@$VERSION 버전이 npm에 존재하지 않습니다."
             exit 1
           fi
 
           # unpublish 실행 및 결과 확인
-          if npm unpublish daleui@$VERSION; then
-            echo "✅ daleui@$VERSION이 npm에서 제거되었습니다."
+          if npm unpublish $PACKAGE@$VERSION; then
+            echo "✅ $PACKAGE@$VERSION이 npm에서 제거되었습니다."
           else
             echo "❌ unpublish 실패. 가능한 원인:"
             echo "  - 배포 후 24시간이 지났을 수 있습니다."
@@ -102,7 +111,7 @@ jobs:
             echo "  - 다운로드가 많은 패키지일 수 있습니다."
             echo ""
             echo "💡 대안: deprecate를 사용하세요:"
-            echo "   npm deprecate daleui@$VERSION \"This version has been recalled\""
+            echo "   npm deprecate $PACKAGE@$VERSION \"This version has been recalled\""
             exit 1
           fi
         env:
@@ -120,28 +129,42 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          # 로컬 태그가 존재하는지 확인
+          # 태그 존재 여부 확인
+          TAG_EXISTS=false
+
+          # 로컬 태그 확인 및 삭제
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             git tag -d "$TAG"
-            echo "로컬 태그 $TAG 삭제됨"
-          else
-            echo "로컬 태그 $TAG가 존재하지 않습니다."
+            echo "✓ 로컬 태그 $TAG 삭제됨"
+            TAG_EXISTS=true
           fi
 
-          # 원격 태그 삭제
+          # 원격 태그 확인 및 삭제
           if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
-            git push origin :refs/tags/$TAG
-            echo "원격 태그 $TAG 삭제됨"
-          else
-            echo "원격 태그 $TAG가 존재하지 않습니다."
+            if git push origin :refs/tags/$TAG; then
+              echo "✓ 원격 태그 $TAG 삭제됨"
+              TAG_EXISTS=true
+            else
+              echo "❌ 원격 태그 삭제 실패. 권한을 확인하세요."
+              exit 1
+            fi
+          fi
+
+          # 태그가 존재하지 않으면 에러
+          if [ "$TAG_EXISTS" = false ]; then
+            echo "❌ 오류: 태그 $TAG가 존재하지 않습니다."
+            echo "존재하는 태그를 확인하세요: git tag -l"
+            exit 1
           fi
 
           echo "✅ Git 태그 $TAG가 삭제되었습니다."
 
       - name: Create rollback summary
         run: |
+          PACKAGE="${{ steps.package-info.outputs.package_name }}"
           echo "## 🔄 롤백 완료" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **패키지**: $PACKAGE" >> $GITHUB_STEP_SUMMARY
           echo "- **작업**: ${{ inputs.action }}" >> $GITHUB_STEP_SUMMARY
           echo "- **버전**: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
 
@@ -170,8 +193,10 @@ jobs:
       - name: Notify on failure
         if: failure()
         run: |
+          PACKAGE="${{ steps.package-info.outputs.package_name }}"
           echo "## ❌ 롤백 실패" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **패키지**: $PACKAGE" >> $GITHUB_STEP_SUMMARY
           echo "- **작업**: ${{ inputs.action }}" >> $GITHUB_STEP_SUMMARY
           echo "- **버전**: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
