@@ -42,6 +42,7 @@ const buttonRecipe = cva({
       sm: { h: "8", px: "3", textStyle: "sm" },
       md: { h: "10", px: "4", textStyle: "md" },
       lg: { h: "12", px: "5", textStyle: "lg" },
+      xl: { h: "14", px: "6", textStyle: "xl" },
     },
   },
   defaultVariants: {
@@ -52,7 +53,7 @@ const buttonRecipe = cva({
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "solid" | "outline" | "ghost";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
