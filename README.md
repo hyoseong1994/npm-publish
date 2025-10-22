@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+# npm 패키지 발행 전략
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## CI/CD 프로세스 (GitHub Actions 기반)
 
-Currently, two official plugins are available:
+### 1. Publish 전략 비교
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| 전략                     | 설명                                        | 자동화 정도 | 추천 |
+| ------------------------ | ------------------------------------------- | ----------- | ---- |
+| **수동 태그**            | 로컬에서 직접 태그 생성 및 푸시             | 하          | ❌   |
+| **버전 스크립트**        | npm version 명령어로 버전 증가 및 태그 생성 | 하          | ❌   |
+| **Manual Github Action** | GitHub UI에서 버전 입력하여 태그 생성       | 중          | ❌   |
+| **PR Github action**     | PR merge 시 자동으로 태그 생성(label 사용)  | 상          | ✅   |
 
-## React Compiler
+### 2. 통합 릴리스 워크플로우
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+개발 -> PR 생성 -> CI 검증 -> release label 추가 -> 머지 -> 태그 생성 -> npm publish
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- npm publish는 **오직 태그가 생성될 때만** 실행됩니다.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 구현 체크리스트
+
+### 📋 GitHub Issues
+
+#### Mid Priority
+
+- **#1** - NPM_TOKEN 시크릿 설정 및 0.0.3 tag 생성
+- **#2** - publish 환경설정
+  - `package.json`: `exports`를 통해 개별 컴포넌트 import 지원, `files`를 통해 npm에 업로드할 파일 지정
+  - `tsconfig.build.json`: 배포용 TypeScript 설정 분리
+  - `vite.config.ts`: React를 번들에 포함하지 않게 하고 ES 모듈 설정 등 수정
+  - `src/index.ts`: 메인 진입점 생성
+- **#3** - 태그 생성 워크플로우 구현
+  - `release label` 이 있는 PR이 merge 될 경우 태그 생성
+- **#4** - 배포 워크플로우
+  - 태그 생성 워크플로우가 완료될 경우 배포
+  - 주의 태그 생성을 트리거로 잡을 경우 github action 정책 때문에 동작하지 않음
+
+#### Low Priority
+
+- **#5** - CHANGELOG.md 템플릿 작성
+  - CHANGELOG.md를 통해 변경 내역을 기록
+- **#6** - 롤백 워크플로우 구현
+  - manual로 구현 input으로 `tag`와 `deprecated 사유`를 받아야함
+  - npm 배포된 패키지는 삭제가 불가능하기에 deprecated만 가능
+- **#7** - github release 생성 워크플로우
+  - github release를 생성하여 github 우측 메뉴에 보여줄 수 있음
