@@ -1,5 +1,6 @@
 import { css, cva } from "../../styled-system/css";
 import { type ButtonHTMLAttributes, forwardRef } from "react";
+import type { RecipeVariant } from "../../styled-system/types";
 
 const buttonRecipe = cva({
   base: {
@@ -51,10 +52,9 @@ const buttonRecipe = cva({
   },
 });
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "solid" | "outline" | "ghost";
-  size?: "sm" | "md" | "lg" | "xl";
-}
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    RecipeVariant<typeof buttonRecipe> {}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant, size, ...props }, ref) => {
