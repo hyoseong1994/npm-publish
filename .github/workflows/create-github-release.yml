@@ -152,13 +152,3 @@ jobs:
               console.error('❌ Failed to create GitHub Release:', error);
               throw error;
             }
-
-      - name: Summary
-        run: |
-          TAG_NAME="${{ steps.tag-info.outputs.tag_name }}"
-          VERSION="${{ steps.tag-info.outputs.version }}"
-
-          echo "🎉 GitHub Release workflow completed!"
-          echo "Tag: $TAG_NAME"
-          echo "Version: $VERSION"
-          echo "Release created: ${{ steps.check-existing-release.outputs.exists == 'false' }}"
