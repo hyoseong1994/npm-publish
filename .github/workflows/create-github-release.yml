@@ -95,7 +95,7 @@ jobs:
             \`\`\`bash
             npm install hyoseong-publish@${version}
             \`\`\`
-
+            `;
 
             try {
               const response = await github.rest.repos.createRelease({
