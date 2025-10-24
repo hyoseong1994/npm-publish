@@ -29,11 +29,15 @@ jobs:
 
       - name: Bump version and create tag
         run: |
+          # 라벨 정보를 JSON으로 가져와서 처리
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          echo "Available labels: $LABELS"
+
           # 라벨에 따라 버전 타입 결정
-          if contains(github.event.pull_request.labels.*.name, 'release/major'); then
+          if echo "$LABELS" | grep -q "release/major"; then
             VERSION_TYPE="major"
             echo "📈 Major version bump"
-          elif contains(github.event.pull_request.labels.*.name, 'release/minor'); then
+          elif echo "$LABELS" | grep -q "release/minor"; then
             VERSION_TYPE="minor"
             echo "📊 Minor version bump"
           else
