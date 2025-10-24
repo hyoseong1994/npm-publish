@@ -29,9 +29,17 @@ jobs:
 
       - name: Bump version and create tag
         run: |
-          # release/ 라벨에서 버전 타입 추출
-          VERSION_TYPE=$(echo "${{ github.event.pull_request.labels.*.name }}" | grep -o 'release/[^,]*' | sed 's/release\///')
-          echo "🔧 Version bump type: $VERSION_TYPE"
+          # 라벨에 따라 버전 타입 결정
+          if contains(github.event.pull_request.labels.*.name, 'release/major'); then
+            VERSION_TYPE="major"
+            echo "📈 Major version bump"
+          elif contains(github.event.pull_request.labels.*.name, 'release/minor'); then
+            VERSION_TYPE="minor"
+            echo "📊 Minor version bump"
+          else
+            VERSION_TYPE="patch"
+            echo "🔧 Patch version bump"
+          fi
 
           # npm version으로 버전 업데이트
           npm version $VERSION_TYPE --no-git-tag-version
