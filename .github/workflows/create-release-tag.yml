@@ -6,7 +6,10 @@ on:
 
 jobs:
   create-tag:
-    if: contains(github.event.pull_request.labels.*.name, 'release')
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'release/major') ||
+      contains(github.event.pull_request.labels.*.name, 'release/minor') ||
+      contains(github.event.pull_request.labels.*.name, 'release/patch')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,12 +29,22 @@ jobs:
 
       - name: Bump version and create tag
         run: |
-          npm version patch --no-git-tag-version
+          # release/ 라벨에서 버전 타입 추출
+          VERSION_TYPE=$(echo "${{ github.event.pull_request.labels.*.name }}" | grep -o 'release/[^,]*' | sed 's/release\///')
+          echo "🔧 Version bump type: $VERSION_TYPE"
+
+          # npm version으로 버전 업데이트
+          npm version $VERSION_TYPE --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
           TAG_NAME="v$NEW_VERSION"
+
+          # Git 커밋 및 태그 생성
           git add package.json
-          git commit -m "chore: bump version to $NEW_VERSION"
+          git commit -m "chore: bump version to $NEW_VERSION ($VERSION_TYPE release)"
           git tag $TAG_NAME
+
+          # 푸시
           git push origin HEAD
           git push origin $TAG_NAME
-          echo "✅ Successfully bumped version to $NEW_VERSION and created tag $TAG_NAME"
+
+          echo "✅ Successfully bumped $VERSION_TYPE version to $NEW_VERSION and created tag $TAG_NAME"
