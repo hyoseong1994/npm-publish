@@ -96,8 +96,6 @@ jobs:
             npm install hyoseong-publish@${version}
             \`\`\`
 
-            ---
-            *Full changelog: https://github.com/${{ github.repository }}/compare/HEAD...${tagName}*`;
 
             try {
               const response = await github.rest.repos.createRelease({
