@@ -43,6 +43,7 @@ const buttonRecipe = cva({
       sm: { h: "8", px: "3", textStyle: "sm" },
       md: { h: "10", px: "4", textStyle: "md" },
       lg: { h: "12", px: "5", textStyle: "lg" },
+      xl: { h: "14", px: "6", textStyle: "xl" },
     },
   },
   defaultVariants: {
