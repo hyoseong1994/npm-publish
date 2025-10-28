@@ -32,15 +32,6 @@ jobs:
           bun run prepare
           bun run build
 
-      - name: Extract version from tag
-        id: version
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG_NAME#v}
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "📦 Tag: ${TAG_NAME}, Version: ${VERSION}"
-
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -50,5 +41,18 @@ jobs:
             exit 1
           fi
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-          npm publish --access public
+
+          # Extract version and determine npm tag
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+          echo "📦 Tag: ${TAG_NAME}, Version: ${VERSION}"
+
+          # Check if this is a pre-release tag and publish accordingly
+          if [[ "$TAG_NAME" == *"beta"* ]] || [[ "$TAG_NAME" == *"rc"* ]]; then
+            echo "🏷️  Publishing with beta tag..."
+            npm publish --access public --tag $TAG_NAME 
+          else
+            echo "🏷️  Publishing with latest tag..."
+            npm publish --access public
+          fi
           echo "✅ Package published successfully!"
