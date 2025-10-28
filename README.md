@@ -5,7 +5,13 @@
 ### 1. 통합 릴리스 워크플로우
 
 ```
-개발 -> PR 생성 -> CI 검증 -> 머지 -> 태그 생성(manual) -> pre release(npm + github) -> 태그 생성(manual) -> release(npm + github)
+flowchart
+    A[개발] --> B(PR 생성)
+    B --> C(CI 검증)
+    B --> D(머지)
+    E[태그 생성]
+    E --> F(pre release)
+    E --> G(release)
 ```
 
 - npm publish는 **오직 태그가 생성될 때만** 실행됩니다.
