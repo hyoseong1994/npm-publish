@@ -87,10 +87,10 @@ jobs:
             const version = '${{ steps.tag-info.outputs.version }}';
             const changelogContent = `${{ steps.changelog.outputs.changelog }}`;
 
-            // Check if this is a pre-release based on tag name
-            const isPrerelease = tagName.includes('beta') || tagName.includes('rc');
-            const releaseType = isPrerelease ? 'Pre-release' : 'Release';
-            const npmTag = isPrerelease ? (tagName.includes('beta') ? 'beta' : 'rc') : 'latest';
+            // Force all GitHub releases to be pre-releases
+            const isPrerelease = true;
+            const releaseType = 'Pre-release';
+            const npmTag = tagName.includes('beta') ? 'beta' : (tagName.includes('rc') ? 'rc' : 'beta');
 
             const releaseBody = `## ${releaseType} ${version}
 
