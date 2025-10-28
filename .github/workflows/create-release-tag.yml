@@ -1,15 +1,25 @@
 name: Create Release Tag
 
 on:
-  pull_request:
-    types: [closed]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version type"
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - major-beta
+          - major-rc
+          - minor-beta
+          - minor-rc
+          - patch-beta
+          - patch-rc
 
 jobs:
   create-tag:
-    if: |
-      contains(github.event.pull_request.labels.*.name, 'release/major') ||
-      contains(github.event.pull_request.labels.*.name, 'release/minor') ||
-      contains(github.event.pull_request.labels.*.name, 'release/patch')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -29,26 +39,49 @@ jobs:
 
       - name: Bump version and create tag
         run: |
-          # 라벨 정보를 JSON으로 가져와서 처리
-          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
-          echo "Available labels: $LABELS"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          echo "📦 Version type: $VERSION_TYPE"
 
-          # 라벨에 따라 버전 타입 결정
-          if echo "$LABELS" | grep -q "release/major"; then
-            VERSION_TYPE="major"
-            echo "📈 Major version bump"
-          elif echo "$LABELS" | grep -q "release/minor"; then
-            VERSION_TYPE="minor"
-            echo "📊 Minor version bump"
-          else
-            VERSION_TYPE="patch"
-            echo "🔧 Patch version bump"
-          fi
+          # 버전 타입에 따라 npm version 명령어 결정
+          case $VERSION_TYPE in
+            major)
+              npm version major --no-git-tag-version
+              ;;
+            minor)
+              npm version minor --no-git-tag-version
+              ;;
+            patch)
+              npm version patch --no-git-tag-version
+              ;;
+            major-beta)
+              npm version premajor --preid=beta --no-git-tag-version
+              ;;
+            major-rc)
+              npm version premajor --preid=rc --no-git-tag-version
+              ;;
+            minor-beta)
+              npm version preminor --preid=beta --no-git-tag-version
+              ;;
+            minor-rc)
+              npm version preminor --preid=rc --no-git-tag-version
+              ;;
+            patch-beta)
+              npm version prerelease --preid=beta --no-git-tag-version
+              ;;
+            patch-rc)
+              npm version prerelease --preid=rc --no-git-tag-version
+              ;;
+            *)
+              echo "❌ Invalid version type: $VERSION_TYPE"
+              exit 1
+              ;;
+          esac
 
-          # npm version으로 버전 업데이트
-          npm version $VERSION_TYPE --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
           TAG_NAME="v$NEW_VERSION"
+
+          echo "📦 New version: $NEW_VERSION"
+          echo "🏷️  Tag name: $TAG_NAME"
 
           # Git 커밋 및 태그 생성
           git add package.json
