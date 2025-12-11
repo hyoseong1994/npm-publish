@@ -9,6 +9,16 @@ export default defineConfig({
     environment: "happy-dom",
     setupFiles: ["./vitest.setup.ts"],
     globals: true,
+    coverage: {
+      exclude: ["styled-system/**"],
+      thresholds: {
+        statements: 30,
+        branches: 50,
+        functions: 30,
+        lines: 30,
+      },
+      reporter: ["lcov"],
+    },
   },
   build: {
     lib: {
