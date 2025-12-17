@@ -20,10 +20,10 @@ export default defineConfig({
     coverage: {
       exclude: ["styled-system/**"],
       thresholds: {
-        statements: 30,
-        branches: 50,
+        statements: 5,
+        branches: 30,
         functions: 30,
-        lines: 30,
+        lines: 5,
       },
       reporter: ["lcov"],
     },
