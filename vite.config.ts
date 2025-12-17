@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     codecovVitePlugin({
       enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
-      bundleName: "<bundle project name>",
+      bundleName: "test-bundle",
       uploadToken: process.env.CODECOV_TOKEN,
     }),
   ],
