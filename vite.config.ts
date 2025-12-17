@@ -9,7 +9,6 @@ export default defineConfig({
     react(),
     codecovVitePlugin({
       enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
-      bundleName: "test-bundle-esm",
       uploadToken: process.env.CODECOV_TOKEN,
     }),
   ],
