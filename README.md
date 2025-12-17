@@ -1,3 +1,6 @@
+[![codecov](https://codecov.io/github/hyoseong1994/npm-publish/graph/badge.svg?token=0PS0UM6JPW)](https://codecov.io/github/hyoseong1994/npm-publish)
+[![bundle size](https://codecov.io/github/DaleStudy/daleui/graph/bundle/daleui-bundle/badge.svg)](https://app.codecov.io/github/DaleStudy/daleui/bundles/main/daleui-bundle)
+
 # npm 패키지 발행 전략
 
 ## CI/CD 프로세스 (GitHub Actions 기반)

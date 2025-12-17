@@ -1,10 +1,18 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { codecovVitePlugin } from "@codecov/vite-plugin";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    codecovVitePlugin({
+      enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+      bundleName: "<bundle project name>",
+      uploadToken: process.env.CODECOV_TOKEN,
+    }),
+  ],
   test: {
     environment: "happy-dom",
     setupFiles: ["./vitest.setup.ts"],
