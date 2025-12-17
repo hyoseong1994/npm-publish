@@ -18,4 +18,10 @@ describe("Button", () => {
     const btn = screen.getByRole("button", { name: /action/i });
     expect(btn).toBeTruthy();
   });
+
+  it("applies disabled styles", () => {
+    render(<Button disabled>Action</Button>);
+    const btn = screen.getByRole("button", { name: /action/i });
+    expect(btn).toBeDisabled();
+  });
 });
