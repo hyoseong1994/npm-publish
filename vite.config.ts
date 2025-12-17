@@ -31,7 +31,6 @@ export default defineConfig({
   build: {
     lib: {
       entry: "./src/index.ts",
-      name: "UiPublishTest",
       formats: ["es", "cjs"],
       fileName: (format) => `index.${format}.js`,
     },
