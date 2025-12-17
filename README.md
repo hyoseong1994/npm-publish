@@ -1,5 +1,6 @@
 [![codecov](https://codecov.io/github/hyoseong1994/npm-publish/graph/badge.svg?token=0PS0UM6JPW)](https://codecov.io/github/hyoseong1994/npm-publish)
-[![bundle size](https://codecov.io/github/DaleStudy/daleui/graph/bundle/daleui-bundle/badge.svg)](https://app.codecov.io/github/DaleStudy/daleui/bundles/main/daleui-bundle)
+[![bundle size](https://codecov.io/github/hyoseong1994/npm-publish/graph/bundle/test-bundle-UiPublishTest-esm/badge.svg)](https://app.codecov.io/github/hyoseong1994/npm-publish/bundles/main/test-bundle-UiPublishTest-esm)
+[![bundle size](https://codecov.io/github/hyoseong1994/npm-publish/graph/bundle/test-bundle-esm/badge.svg)](https://app.codecov.io/github/hyoseong1994/npm-publish/bundles/main/test-bundle-esm)
 
 # npm 패키지 발행 전략
 
