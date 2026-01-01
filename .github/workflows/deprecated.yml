@@ -33,5 +33,6 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           PACKAGE_NAME=$(jq -r .name package.json)
           npm deprecate "$PACKAGE_NAME@${{ inputs.version }}" "${{ inputs.reason }}"
