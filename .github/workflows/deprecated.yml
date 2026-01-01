@@ -1,4 +1,4 @@
-name: Deprecated ⚠️
+name: Deprecation ⚠️
 
 on:
   workflow_dispatch:
@@ -33,10 +33,5 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "❌ NODE_AUTH_TOKEN secret is not set"
-            exit 1
-          fi
-
-          PACKAGE_NAME=$(npm pkg get name | sed 's/"//g')
+          PACKAGE_NAME=$(jq -r .name package.json)
           npm deprecate "$PACKAGE_NAME@${{ inputs.version }}" "${{ inputs.reason }}"
