@@ -38,7 +38,8 @@ jobs:
 
       - uses: fregante/setup-git-user@v2
 
-      - name: Bump version and push tag
+      - name: Create and push tag
         run: |
-          git tag -a v${{ steps.version.outputs.version }} -m "release v${{ steps.version.outputs.version }}"
-          git push --follow-tags
+          TAG_NAME="v${{ steps.version.outputs.version }}"
+          git tag -a "$TAG_NAME" -m "Release ${{ steps.version.outputs.version }}"
+          git push origin "$TAG_NAME"
