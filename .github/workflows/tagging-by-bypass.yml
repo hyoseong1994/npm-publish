@@ -1,4 +1,4 @@
-name: Tagging 🏷️
+name: Tagging Only 🏷️
 
 on:
   pull_request:
@@ -21,17 +21,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
-      - name: Create GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Determine version
         id: version
@@ -47,10 +36,9 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - uses: fregante/setup-git-user@v2
+
       - name: Bump version and push tag
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          npm version ${{ steps.version.outputs.version }}
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          git tag -a v${{ steps.version.outputs.version }} -m "release v${{ steps.version.outputs.version }}"
           git push --follow-tags
