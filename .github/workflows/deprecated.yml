@@ -26,8 +26,22 @@ jobs:
           fi
 
       - uses: actions/checkout@v6
-      - name: Deprecate npm package version
+      - name: Get package information
+        id: package-info
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           PACKAGE_NAME=$(jq -r .name package.json)
-          npm deprecate "$PACKAGE_NAME@${{ inputs.version }}" "${{ inputs.reason }}"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Validate version exists in npm registry
+        id: validate-version
+        run: |
+          NPM_OUTPUT=$(npm view "${{ steps.package-info.outputs.package_name }}@${{ inputs.version }}" 2>&1) || {
+            echo "$NPM_OUTPUT" | grep -q "404" && echo "❌ Version does not exist in npm registry"
+            exit 1
+          }
+
+      - name: Deprecate npm package version
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm deprecate "${{ steps.package-info.outputs.package_name }}@${{ inputs.version }}" "${{ inputs.reason }}"
